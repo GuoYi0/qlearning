@@ -1,3 +1,8 @@
 .idea
 */__pycache__/
 __pycache__/
+examples/images
+test
+/examples/result.gif
+.git
+result.gif

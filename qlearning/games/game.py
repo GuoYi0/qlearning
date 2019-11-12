@@ -4,9 +4,9 @@ class Game(object):
     定义一个基类
     """
     def __init__(self):
-        self.reset()
         self.state = None
         self._nb_actions = 0
+        self.reset()
 
     @property
     def name(self):
@@ -41,5 +41,5 @@ class Game(object):
         return self.get_state()
 
     def get_possible_actions(self):
-        return range(self.nb_actions)
+        return range(self._nb_actions)
 

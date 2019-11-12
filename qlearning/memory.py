@@ -44,8 +44,37 @@ class ExperienceReplay(Memory):
             self.memory.pop(0)
 
     def get_batch(self, model, batch_size, gamma=0.9):
+        """
+        返回(x, label)
+        :param model:
+        :param batch_size:
+        :param gamma:
+        :return:
+        """
         if self.fast:
             return self.get_batch_fast(model, batch_size, gamma)
+        if len(self.memory) < batch_size:
+            batch_size = len(self.memory)
+        nb_actions = model.get_output_shape_at(0)[-1]
+        samples = np.array(sample(self.memory, batch_size))
+        input_dim = np.prod(self.input_shape)
+        S = samples[:, 0: input_dim]
+        a = samples[:, input_dim]
+        r = samples[:, input_dim + 1]
+        S_prime = samples[:, input_dim + 2: 2 * input_dim + 2]
+        game_over = samples[:, 2 * input_dim + 2]
+        r = r.repeat(nb_actions).reshape((batch_size, nb_actions))
+        game_over = game_over.repeat(nb_actions).reshape((batch_size, nb_actions))
+        S = S.reshape((batch_size,) + self.input_shape)
+        S_prime = S_prime.reshape((batch_size,) + self.input_shape)
+        X = np.concatenate([S, S_prime], axis=0)
+        Y = model.predict(X)
+        Qsa = np.max(Y[batch_size:], axis=1).repeat(nb_actions).reshape((batch_size, nb_actions))
+        delta = np.zeros((batch_size, nb_actions))
+        a = np.cast['int'](a)
+        delta[np.arange(batch_size), a] = 1
+        targets = (1 - delta) * Y[:batch_size] + delta * (r + gamma * (1 - game_over) * Qsa)
+        return S, targets
 
     def get_batch_fast(self, model, batch_size, gamma):
         if len(self.memory) < batch_size:
@@ -69,19 +98,19 @@ class ExperienceReplay(Memory):
         r = K.reshape(r, (batch_size, nb_actions))
         game_over = K.repeat(game_over, nb_actions)
         game_over = K.reshape(game_over, (batch_size, nb_actions))
-        S = K.reshape(S, (batch_size, ) + input_shape)
-        S_prime = K.reshape(S_prime, (batch_size, ) + input_shape)
+        S = K.reshape(S, (batch_size,) + input_shape)
+        S_prime = K.reshape(S_prime, (batch_size,) + input_shape)
         X = K.concatenate([S, S_prime], axis=0)
         Y = model(X)
-        Qsa = K.max(Y[batch_size:], axis=1)  # 产生新状态以后，后续的动作
+        Qsa = K.max(Y[batch_size:], axis=1)  # 产生新状态以后，后续的预测动作
         Qsa = K.reshape(Qsa, (batch_size, 1))
         Qsa = K.repeat(Qsa, nb_actions)  # [batch_size, nb_actions, 1]
         Qsa = K.reshape(Qsa, (batch_size, nb_actions))
         delta = K.reshape(self.one_hot(a, nb_actions), (batch_size, nb_actions))  # 执行的动作
         # Y[:batch_size] 的 shape 是(batch_size, nb_actions)
         targets = (1 - delta) * Y[:batch_size] + delta * (r + gamma * (1 - game_over) * Qsa)  # TODO 这里怎么理解？
+        # TODO 没有执行的不予训练，执行了的，target的表达式为啥是这样子的？
         self.batch_function = K.function(inputs=[samples], outputs=[S, targets])
 
     def one_hot(self, seq, num_classes):
         return K.one_hot(K.reshape(K.cast(seq, "int32"), (-1, 1)), num_classes)  # [batch_size, 1, num_classes]
-

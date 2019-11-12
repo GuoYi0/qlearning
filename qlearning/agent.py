@@ -1,5 +1,10 @@
+# -*- coding: utf-8 -*-
 from .memory import ExperienceReplay
 import numpy as np
+import os
+import matplotlib.pyplot as plt
+import imageio
+import shutil
 
 class Agent(object):
     """一个玩家的行为"""
@@ -42,6 +47,7 @@ class Agent(object):
             epsilon = epsilon[0]
         else:
             final_epsilon = epsilon
+            delta = 0.0
 
         model = self.model
         win_count = 0
@@ -70,7 +76,18 @@ class Agent(object):
                 S = S_prime
                 if epoch >= observe:
                     batch = self.memory.get_batch(model=model, batch_size=batch_size, gamma=gamma)
+                    if batch:
+                        inputs, targets = batch
+                        loss += float(model.train_on_batch(inputs, targets))
+                if checkpoint and ((epoch + 1 - observe) % checkpoint == 0 or epoch + 1 == nb_epoch):
+                    model.save_weights('weights.dat')
 
+            if game.is_won():
+                win_count += 1
+            if epsilon > final_epsilon and epoch >= observe:
+                epsilon -= delta
+            print("Epoch {:03d}/{:03d} | Loss {:.4f} | Epsilon {:.2f} | Win count {}".format(epoch + 1, nb_epoch, loss,
+                                                                                             epsilon, win_count))
 
     def check_game_compatibility(self, game):
         """检查输入输出的匹配性"""
@@ -106,3 +123,57 @@ class Agent(object):
             self.frames.append(frame)
             self.frames.pop(0)
         return np.expand_dims(self.frames, 0)
+
+    def play(self, game, nb_epoch=10, epsilon=0., visualize=True):
+        self.check_game_compatibility(game)
+        model = self.model
+        win_count = 0
+        frames = []
+        for epoch in range(nb_epoch):
+            game.reset()  # 随机初始化一个状态
+            self.clear_frames()  # 帧清空
+            S = self.get_game_data(game)
+            if visualize:
+                frames.append(game.draw())  # 水果所在位置和盘子所在位置为1，其他为0。
+            game_over = False
+            while not game_over:
+                if np.random.rand() < epsilon:
+                    print("random")
+                    action = int(np.random.randint(0, game.nb_actions))
+                else:
+                    q = model.predict(S)[0]
+                    possible_actions = game.get_possible_actions()
+                    q = [q[i] for i in possible_actions]
+                    action = possible_actions[np.argmax(q)]
+                game.play(action)
+                S = self.get_game_data(game)
+                if visualize:
+                    frames.append(game.draw())
+                game_over = game.is_over()
+            if game.is_won():
+                win_count += 1
+        print("Accuracy {} %".format(100. * win_count / nb_epoch))
+        if visualize:
+            gifs = []
+            if 'images' not in os.listdir('.'):
+                os.mkdir('images')
+            else:
+                shutil.rmtree("images")
+                os.mkdir('images')
+            for i in range(len(frames)):
+                ret = plt.imshow(frames[i], interpolation='none')
+                gifs.append(ret)
+                plt.savefig("images/" + game.name + str(i) + ".png")
+            toGif("images", game.name)
+
+
+def toGif(path, name):
+    def func(key):
+        index = int(key.split(name)[1].split('.')[0])
+        return index
+    file_list = os.listdir(path)
+    file_list = sorted(file_list, key=func)
+    frames = []
+    for png in file_list:
+        frames.append(imageio.imread(os.path.join(path, png)))
+    imageio.mimsave("result.gif", frames, 'GIF', duration=0.3)
