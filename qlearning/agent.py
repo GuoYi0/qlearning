@@ -13,7 +13,7 @@ class Agent(object):
         if memory:
             self.memory = memory
         else:
-            self.memory = ExperienceReplay(memory_size)  # TODO 暂且不知道干啥的
+            self.memory = ExperienceReplay(memory_size)  # 缓存
 
         if not nb_frames and not model.get_input_shape_at(0)[1]:
             raise Exception("Missing argument : nb_frames not provided")

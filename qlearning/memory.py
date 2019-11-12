@@ -108,8 +108,8 @@ class ExperienceReplay(Memory):
         Qsa = K.reshape(Qsa, (batch_size, nb_actions))
         delta = K.reshape(self.one_hot(a, nb_actions), (batch_size, nb_actions))  # 执行的动作
         # Y[:batch_size] 的 shape 是(batch_size, nb_actions)
-        targets = (1 - delta) * Y[:batch_size] + delta * (r + gamma * (1 - game_over) * Qsa)  # TODO 这里怎么理解？
-        # TODO 没有执行的不予训练，执行了的，target的表达式为啥是这样子的？
+        targets = (1 - delta) * Y[:batch_size] + delta * (r + gamma * (1 - game_over) * Qsa)
+        # 这里是关键。没有执行的不予训练；执行了的，如果game_over=1，则往分数r方向学习，如果game_over=0, 则r=0,
         self.batch_function = K.function(inputs=[samples], outputs=[S, targets])
 
     def one_hot(self, seq, num_classes):

@@ -9,9 +9,9 @@ class Catch(Game):
         super(Catch, self).__init__()
 
     def reset(self):
-        n = np.random.randint(0, self.grid_size, size=1)  # TODO 是不是不减一？
-        m = np.random.randint(1, self.grid_size-1, size=1)  # TODO 是不是应该减一?
-        # 随机初始化一个状态，[0, n]表示水果所在位置，0行n列；m表示盘子中心点位置
+        n = np.random.randint(0, self.grid_size, size=1)  # 水果的初始位置，随机化为[0, grid_size)
+        m = np.random.randint(1, self.grid_size-1, size=1)  # 盘子中心所在位置，
+        # 随机初始化一个状态，[0, n]表示水果所在位置；m表示盘子中心点位置
         self.state = np.asarray([0, n, m])[np.newaxis]
 
     @property
