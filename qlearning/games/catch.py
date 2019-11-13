@@ -66,16 +66,27 @@ class Catch(Game):
         canvas[-1, state[2]-1:state[2]+2] = 1
         return canvas
 
+    # def get_score(self):
+    #     row, col, basket = self.state[0]
+    #     if row == self.grid_size-1:  # 水果到最后一行了
+    #         if abs(col - basket) <= 1:  # 盘子接住了，赢了，得一分
+    #             self.won = True
+    #             return 1
+    #         else:
+    #             return -1   # 没接住，得-1分
+    #     else:  # 水果没有到最后一行，得0分
+    #         return 0
     def get_score(self):
         row, col, basket = self.state[0]
         if row == self.grid_size-1:  # 水果到最后一行了
             if abs(col - basket) <= 1:  # 盘子接住了，赢了，得一分
                 self.won = True
-                return 1
+                return 1.0
             else:
-                return -1   # 没接住，得-1分
+                return -1.0   # 没接住，得-1分
         else:  # 水果没有到最后一行，得0分
-            return 0
+            return 0.0
+
 
     def is_over(self):
         if self.state[0, 0] == self.grid_size-1:  # 水果到达最后一行了，游戏结束

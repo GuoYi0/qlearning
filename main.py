@@ -4,6 +4,12 @@ from keras.layers import Flatten, Dense
 from qlearning.games import Catch
 from keras.optimizers import *
 from qlearning import Agent
+from keras import backend as K
+
+
+def tanh(x):
+    return K.tanh(x)
+
 
 if __name__ == "__main__":
     grid_size = 10  # 每一帧都是10*10的方格
@@ -15,9 +21,10 @@ if __name__ == "__main__":
     model.add(Flatten(input_shape=(nb_frames, grid_size, grid_size)))  # input_shape (None, 1, 10, 10)
     model.add(Dense(hidden_size, activation='relu'))
     model.add(Dense(hidden_size, activation="relu"))
-    model.add(Dense(catch.nb_actions, activation='tanh'))  # 输出神经元个数是3，代表左走、右走、保持不动
+    model.add(Dense(catch.nb_actions, activation=tanh))  # 输出神经元个数是3，代表左走、右走、保持不动
+    # model.add(Dense(catch.nb_actions, activation=K.sigmoid))  # 输出神经元个数是3，代表左走、右走、保持不动
     # model.add(Dense(catch.nb_actions))  # 输出神经元个数是3，代表左走、右走、保持不动
-    model.compile(sgd(lr=0.2), "mse")  # sgd优化器，学习率0.2
+    model.compile(sgd(lr=0.5), "mse")  # sgd优化器，学习率0.2
     agent = Agent(model=model)   # 定义一个玩家
     agent.train(catch, batch_size=10, nb_epoch=1000, epsilon=.1)  # 玩家开始训练游戏
     agent.play(catch)
